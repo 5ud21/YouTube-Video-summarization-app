@@ -6,16 +6,35 @@ from haystack.pipelines import Pipeline
 from model_add import LlamaCPPInvocationLayer
 import time
 
+# Set the page configuration for the Streamlit app
 st.set_page_config(
     layout="wide"
 )
 
 def download_video(url):
+    """
+    Downloads the audio stream of a YouTube video.
+
+    Args:
+        url (str): The URL of the YouTube video.
+
+    Returns:
+        str: The file path of the downloaded audio.
+    """
     yt = YouTube(url)
     video = yt.streams.filter(abr='160kbps').last()
     return video.download()
 
 def initialize_model(full_path):
+    """
+    Initializes the PromptModel with the specified model path.
+
+    Args:
+        full_path (str): The file path to the model.
+
+    Returns:
+        PromptModel: An instance of the PromptModel.
+    """
     return PromptModel(
         model_name_or_path=full_path,
         invocation_layer_class=LlamaCPPInvocationLayer,
@@ -24,10 +43,29 @@ def initialize_model(full_path):
     )
 
 def initialize_prompt_node(model):
+    """
+    Initializes the PromptNode with the specified model.
+
+    Args:
+        model (PromptModel): The initialized PromptModel.
+
+    Returns:
+        PromptNode: An instance of the PromptNode.
+    """
     summary_prompt = "deepset/summarization"
     return PromptNode(model_name_or_path=model, default_prompt_template=summary_prompt, use_gpu=False)
 
 def transcribe_audio(file_path, prompt_node):
+    """
+    Transcribes the audio file and generates a summary using the PromptNode.
+
+    Args:
+        file_path (str): The file path of the audio file.
+        prompt_node (PromptNode): The initialized PromptNode.
+
+    Returns:
+        dict: The output of the transcription and summarization pipeline.
+    """
     whisper = WhisperTranscriber()
     pipeline = Pipeline()
     pipeline.add_node(component=whisper, name="whisper", inputs=["File"])
@@ -36,20 +74,22 @@ def transcribe_audio(file_path, prompt_node):
     return output
 
 def main():
-
+    """
+    The main function that runs the Streamlit app.
+    """
     # Set the title and background color
     st.title("YouTube Video Summarizer 🎥")
     st.markdown('<style>h1{color: orange; text-align: center;}</style>', unsafe_allow_html=True)
-    st.subheader('Built with the Llama 2 🦙, Haystack, Streamlit and ❤️')
+    st.subheader('Built with Llama 2 🦙, Haystack, Streamlit and ❤️')
     st.markdown('<style>h3{color: pink;  text-align: center;}</style>', unsafe_allow_html=True)
 
     # Expander for app details
     with st.expander("About the App"):
-        st.write("This app allows you to summarize while watching a YouTube video.")
-        st.write("Enter a YouTube URL in the input box below and click 'Submit' to start. This app is built by AI Anytime.")
+        st.write("An app which can generate an exhaustive summary of the input YouTube video.")
+        st.write("Enter a YouTube URL in the input box and click 'Submit' to start.")
 
     # Input box for YouTube URL
-    youtube_url = st.text_input("Enter YouTube URL")
+    youtube_url = st.text_input("YouTube URL")
 
     # Submit button
     if st.button("Submit") and youtube_url:
@@ -60,7 +100,7 @@ def main():
         # Initialize model
         full_path = "llama-2-7b-32k-instruct.Q4_K_S.gguf"
         model = initialize_model(full_path)
-        prompt_node = prompt_node = initialize_prompt_node(model)
+        prompt_node = initialize_prompt_node(model)
         # Transcribe audio
         output = transcribe_audio(file_path, prompt_node)
 
@@ -76,7 +116,7 @@ def main():
 
         # Column 2: Summary View
         with col2:
-            st.header("Summarization of YouTube Video")
+            st.header("A summary of the input YouTube Video")
             st.write(output)
             st.success(output["results"][0].split("\n\n[INST]")[0])
             st.write(f"Time taken: {elapsed_time:.2f} seconds")
